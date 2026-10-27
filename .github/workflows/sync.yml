@@ -1,0 +1,45 @@
+name: Sync Mihomo Subscription
+
+on:
+  schedule:
+    # UTC 00:00 = 北京时间 08:00
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mihomo-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests pyyaml
+
+      - name: Fetch subscription
+        run: python sync_mihomo.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add clash_proxies_latest.yaml archive
+          if git diff --staged --quiet; then
+            echo "no changes"
+          else
+            git commit -m "chore: sync subscription $(date -u +%Y-%m-%d)"
+            git push
+          fi
