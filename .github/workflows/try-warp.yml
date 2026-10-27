@@ -12,11 +12,20 @@ jobs:
           python-version: "3.12"
       - name: Install
         run: pip install --quiet requests pyyaml
-      - name: Start WARP
+      - name: Start WARP (wireguard)
         uses: fscarmen/warp-on-actions@v1.3
         with:
-          mode: proxy
+          mode: wireguard
       - name: Show egress IP
-        run: curl -sS --max-time 10 https://www.cloudflare.com/cdn-cgi/trace | grep -E "^(ip|loc)="
-      - name: Fetch subscription
+        run: |
+          echo "--- direct ---"
+          curl -sS --max-time 15 https://www.cloudflare.com/cdn-cgi/trace | grep -E "^(ip|loc)=" || true
+          echo "--- proxy 40000 ---"
+          curl -sS --max-time 15 -x socks5h://127.0.0.1:40000 https://www.cloudflare.com/cdn-cgi/trace | grep -E "^(ip|loc)=" || echo "socks5 40000 unavailable"
+      - name: Fetch subscription (direct)
+        run: python sync_mihomo.py
+      - name: Fetch subscription (via socks5)
+        continue-on-error: true
+        env:
+          ALL_PROXY: socks5h://127.0.0.1:40000
         run: python sync_mihomo.py
