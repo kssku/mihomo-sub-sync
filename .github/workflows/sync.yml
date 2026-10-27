@@ -1,45 +1,20 @@
 name: Sync Mihomo Subscription
 
+# 抓取在住宅 IP 的本地机器执行（cron 04:17）。
+# GitHub Actions 出口 IP 被机场拦截，无法直连订阅源。
+# 本工作流仅保留手动触发作为应急手段。
+
 on:
-  schedule:
-    # UTC 00:00 = 北京时间 08:00
-    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency:
-  group: mihomo-sync
-  cancel-in-progress: false
-
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install deps
-        run: pip install --quiet requests pyyaml
-
-      - name: Fetch subscription
-        run: python sync_mihomo.py
-
-      - name: Commit changes
+      - name: Notice
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add clash_proxies_latest.yaml archive
-          if git diff --staged --quiet; then
-            echo "no changes"
-          else
-            git commit -m "chore: sync subscription $(date -u +%Y-%m-%d)"
-            git push
-          fi
+          echo "自动同步由本地 cron 完成，本工作流仅作应急手动触发。"
