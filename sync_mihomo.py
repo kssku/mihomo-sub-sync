@@ -17,8 +17,17 @@ import sys
 import time
 import subprocess
 
+import socket
+
 import requests
 import urllib3
+import urllib3.util.connection as _u3cn
+
+# 强制 IPv4 解析。订阅源（sub.danhu.../cdn.cloudflare...）同时有 A 和 AAAA
+# 记录，而本机 IPv6 到 Cloudflare 的路径绕远：走 v6 时单次下载从 ~1s
+# 变成 16s+，超过 connect timeout 后整轮同步直接失败。实测强制 v4 后
+# 0.6s 完成。
+_u3cn.allowed_gai_family = lambda: socket.AF_INET
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -121,7 +130,10 @@ def is_valid_yaml(file_path):
         with open(file_path, "r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle)
         return isinstance(data, dict) and ("proxies" in data or "proxy-providers" in data)
-    except Exception:
+    except Exception as exc:
+        # 以前这里是裸 except: return False，于是「缺 PyYAML」也被报成
+        # 「不是有效的 Mihomo 配置」，排查时被误导了很久。
+        print("YAML 校验异常: %s" % exc)
         return False
 
 
